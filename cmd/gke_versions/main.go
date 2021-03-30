@@ -1,22 +1,16 @@
 package main
 
 import (
-	"flag"
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/fregdee/gke_versions"
 )
 
 func main() {
-	log.SetFlags(0)
-	err := gke_versions.Run(os.Stdout, os.Stderr)
-	if err != nil && err != flag.ErrHelp {
-		log.Println(err)
-		exitCode := 1
-		if ecoder, ok := err.(interface{ ExitCode() int }); ok {
-			exitCode = ecoder.ExitCode()
-		}
-		os.Exit(exitCode)
+	err := gke_versions.Run()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

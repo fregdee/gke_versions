@@ -3,14 +3,14 @@ package gke_versions
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"flag"
+	//"errors"
+	"github.com/pkg/errors"
 	"fmt"
-	"io"
-	"log"
 	"os"
+	"runtime"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/jessevdk/go-flags"
 
 	container "cloud.google.com/go/container/apiv1"
 	containerpb "google.golang.org/genproto/googleapis/container/v1"
@@ -18,16 +18,63 @@ import (
 
 const cmdName = "gke_versions"
 
+// version by Makefile
+var version string
+
 // Required permissions
 // - container.clusters.list
 const googleApplicationCredentialsPath = "GOOGLE_APPLICATION_CREDENTIALS"
 
-func Run(outStream, errStream io.Writer) error {
-	log.SetOutput(errStream)
-	flag.Usage = func() {
-		fmt.Fprintf(outStream,"%s prints versions of all GKE Clusters and NodePool\n\n")
-		fmt.Fprintf(outStream,"Usage:\n\t %s\n", cmdName)
-		flag.PrintDefaults()
+type cmdOpts struct {
+	Version bool `short:"v" long:"version" description:"show version"`
+}
+
+func printVersion() {
+	fmt.Printf(`%s %s
+Compiler: %s %s
+`,
+		cmdName,
+		version,
+		runtime.Compiler,
+		runtime.Version())
+}
+
+func getProjectName() (string, error) {
+	credentialFilePath := os.Getenv(googleApplicationCredentialsPath)
+	if credentialFilePath == "" {
+		return "", errors.New("GOOGLE_APPLICATION_CREDENTIALS is empty.\nSee also https://cloud.google.com/docs/authentication/getting-started#setting_the_environment_variable")
+	}
+	d, err := os.ReadFile(credentialFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	type Credential struct {
+		ProjectId string `json:"project_id"`
+	}
+
+	var credential Credential
+	err = json.Unmarshal(d, &credential)
+	if err != nil {
+		return "", err
+	}
+
+	return credential.ProjectId, nil
+}
+
+func Run() error {
+	opts := cmdOpts{}
+	psr := flags.NewParser(&opts, flags.Default)
+	psr.Name = cmdName
+	_, err := psr.Parse()
+	if err != nil {
+		// TODO: handle err
+		return nil
+	}
+
+	if opts.Version {
+		printVersion()
+		return nil
 	}
 
 	projectName, err := getProjectName()
@@ -35,10 +82,8 @@ func Run(outStream, errStream io.Writer) error {
 		return err
 	}
 
-	parent := fmt.Sprintf("projects/%s/locations/-", projectName)
-
 	req := &containerpb.ListClustersRequest{
-		Parent: parent,
+		Parent: fmt.Sprintf("projects/%s/locations/-", projectName),
 	}
 
 	ctx := context.Background()
@@ -53,8 +98,8 @@ func Run(outStream, errStream io.Writer) error {
 
 	clusters := resp.Clusters
 	if len(clusters) == 0 {
-		_, err := fmt.Fprint(outStream, "0 clusters\n")
-		return err
+		fmt.Println("0 clusters")
+		return nil
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
@@ -74,28 +119,4 @@ func Run(outStream, errStream io.Writer) error {
 	table.Render()
 
 	return nil
-}
-
-func getProjectName() (string, error) {
-	credentialFilePath := os.Getenv(googleApplicationCredentialsPath)
-	if credentialFilePath == "" {
-		return "", errors.New("GOOGLE_APPLICATION_CREDENTIALS is empty.\nSee also https://cloud.google.com/docs/authentication/getting-started#setting_the_environment_variable")
-	}
-	d, err := os.ReadFile(credentialFilePath)
-	if err != nil {
-		return "", err
-	}
-
-	type Credential struct {
-		ProjectId string `json:"project_id"`
-	}
-
-	var credential Credential
-
-	err = json.Unmarshal(d, &credential)
-	if err != nil {
-		return "", err
-	}
-
-	return credential.ProjectId, nil
 }
