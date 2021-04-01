@@ -1,0 +1,19 @@
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - "386"
+    main: cmd/gke_versions/main.go
+    ldflags:
+      - -w -s -X github.com/{{ .Owner }}/gke_versions.version={{ .Version }}
+archives:
+  - format: zip
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+release:
+  github:
+    owner: fregdee
+    name: gke_versions
