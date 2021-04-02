@@ -9,7 +9,7 @@ builds:
       - "386"
     main: cmd/gke_versions/main.go
     ldflags:
-      - -w -s -X github.com/{{ .Owner }}/gke_versions.version={{ .Version }}
+      - -w -s -X github.com/fregdee/gke_versions.version={{ .Version }}
 archives:
   - format: zip
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
