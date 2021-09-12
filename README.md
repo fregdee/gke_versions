@@ -12,7 +12,7 @@ Use [Google Application Default Credentials](https://developers.google.com/ident
 
 ## Installation
 ```shell
-go get github.com/fregdee/gke_versoins
+go get github.com/fregdee/gke_versions
 ```
 
 ## Usage
